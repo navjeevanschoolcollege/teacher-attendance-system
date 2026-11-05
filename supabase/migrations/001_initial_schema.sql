@@ -124,85 +124,72 @@ ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wifi_settings ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- HELPER FUNCTIONS FOR RLS (Prevents infinite recursion)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT COALESCE(
+    (SELECT role = 'admin' FROM public.teachers WHERE email = auth.jwt()->>'email' LIMIT 1),
+    false
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_teacher_id()
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT teacher_id FROM public.teachers WHERE email = auth.jwt()->>'email' LIMIT 1;
+$$;
+
+-- ============================================================
 -- RLS POLICIES: Teachers
 -- ============================================================
--- Teachers: read own, admin reads all
-CREATE POLICY "Teachers can view own profile" ON teachers FOR SELECT USING (
-  email = auth.jwt()->>'email' OR 
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
-CREATE POLICY "Admin can manage teachers" ON teachers FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
+CREATE POLICY "Allow select teachers" ON teachers FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage teachers" ON teachers FOR ALL USING (is_admin() OR auth.role() = 'service_role');
 
 -- ============================================================
 -- RLS POLICIES: Attendance
 -- ============================================================
--- Attendance: teachers read/insert own, admin manages all
-CREATE POLICY "Teachers can view own attendance" ON attendance FOR SELECT USING (
-  teacher_id IN (SELECT teacher_id FROM teachers WHERE email = auth.jwt()->>'email') OR
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
-CREATE POLICY "Teachers can insert own attendance" ON attendance FOR INSERT WITH CHECK (
-  teacher_id IN (SELECT teacher_id FROM teachers WHERE email = auth.jwt()->>'email')
-);
-CREATE POLICY "Admin can manage attendance" ON attendance FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
-CREATE POLICY "Service role full access attendance" ON attendance FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Allow select attendance" ON attendance FOR SELECT USING (true);
+CREATE POLICY "Allow insert attendance" ON attendance FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update attendance" ON attendance FOR UPDATE USING (true);
+CREATE POLICY "Allow delete attendance" ON attendance FOR DELETE USING (is_admin() OR auth.role() = 'service_role');
 
 -- ============================================================
 -- RLS POLICIES: Devices
 -- ============================================================
-CREATE POLICY "Teachers can view own device" ON devices FOR SELECT USING (
-  teacher_id IN (SELECT teacher_id FROM teachers WHERE email = auth.jwt()->>'email') OR
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
-CREATE POLICY "Teachers can register device" ON devices FOR INSERT WITH CHECK (
-  teacher_id IN (SELECT teacher_id FROM teachers WHERE email = auth.jwt()->>'email')
-);
-CREATE POLICY "Admin manages devices" ON devices FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
+CREATE POLICY "Allow select devices" ON devices FOR SELECT USING (true);
+CREATE POLICY "Allow insert devices" ON devices FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update devices" ON devices FOR UPDATE USING (true);
+CREATE POLICY "Allow delete devices" ON devices FOR DELETE USING (is_admin() OR auth.role() = 'service_role');
 
 -- ============================================================
 -- RLS POLICIES: Leaves
 -- ============================================================
-CREATE POLICY "Teachers can view own leaves" ON leaves FOR SELECT USING (
-  teacher_id IN (SELECT teacher_id FROM teachers WHERE email = auth.jwt()->>'email') OR
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
-CREATE POLICY "Teachers can apply leaves" ON leaves FOR INSERT WITH CHECK (
-  teacher_id IN (SELECT teacher_id FROM teachers WHERE email = auth.jwt()->>'email')
-);
-CREATE POLICY "Admin manages leaves" ON leaves FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
+CREATE POLICY "Allow select leaves" ON leaves FOR SELECT USING (true);
+CREATE POLICY "Allow insert leaves" ON leaves FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update leaves" ON leaves FOR UPDATE USING (is_admin() OR auth.role() = 'service_role');
+CREATE POLICY "Allow delete leaves" ON leaves FOR DELETE USING (is_admin() OR auth.role() = 'service_role');
 
 -- ============================================================
--- RLS POLICIES: Holidays (everyone reads, admin manages)
+-- RLS POLICIES: Holidays
 -- ============================================================
-CREATE POLICY "Everyone can view holidays" ON holidays FOR SELECT USING (true);
-CREATE POLICY "Admin manages holidays" ON holidays FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
+CREATE POLICY "Allow select holidays" ON holidays FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage holidays" ON holidays FOR ALL USING (is_admin() OR auth.role() = 'service_role');
 
 -- ============================================================
--- RLS POLICIES: WiFi Settings (everyone reads, admin manages)
+-- RLS POLICIES: WiFi Settings
 -- ============================================================
-CREATE POLICY "Everyone can view wifi settings" ON wifi_settings FOR SELECT USING (true);
-CREATE POLICY "Admin manages wifi settings" ON wifi_settings FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM teachers WHERE role = 'admin')
-);
-
--- ============================================================
--- RLS POLICIES: Service role bypass for all tables
--- ============================================================
-CREATE POLICY "Service role teachers" ON teachers FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role devices" ON devices FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role leaves" ON leaves FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role holidays" ON holidays FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role wifi" ON wifi_settings FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Allow select wifi_settings" ON wifi_settings FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage wifi_settings" ON wifi_settings FOR ALL USING (is_admin() OR auth.role() = 'service_role');
 
 -- ============================================================
 -- SEED DATA: WiFi Settings
