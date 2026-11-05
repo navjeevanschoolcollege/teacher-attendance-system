@@ -113,3 +113,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to fetch dashboard data', message: err.message });
   }
 };
+

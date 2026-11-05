@@ -52,3 +52,4 @@ export function useRealtimeAttendance(selectedDate) {
 
   return { attendance, loading, error, refresh: fetchAttendance };
 }
+

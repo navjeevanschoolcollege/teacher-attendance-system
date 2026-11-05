@@ -110,3 +110,4 @@ export function useDashboardStats(date) {
 
   return { stats, teachersList, holiday, wifiSettings, loading, error, refresh: fetchDashboardData };
 }
+

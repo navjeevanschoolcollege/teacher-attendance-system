@@ -2,8 +2,8 @@
 /// Update [supabaseUrl] and [supabaseAnonKey] before building the APK.
 class AppConfig {
   // ── Supabase credentials ─────────────────────────────────────────────
-  static const String supabaseUrl = 'YOUR_SUPABASE_URL';
-  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+  static const String supabaseUrl = 'https://qfiyjeapsfzrabplihbj.supabase.co';
+  static const String supabaseAnonKey = 'sb_publishable_pm2xD8KUeQtQCBUgVaeENg_phW-cJ0L';
 
   // ── WiFi check intervals ────────────────────────────────────────────
   /// How often the foreground timer polls WiFi (in minutes).

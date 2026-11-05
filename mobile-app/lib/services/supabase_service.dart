@@ -142,3 +142,4 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(res);
   }
 }
+

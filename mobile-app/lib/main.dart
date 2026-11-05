@@ -51,3 +51,4 @@ class CampusAttendanceApp extends StatelessWidget {
     );
   }
 }
+

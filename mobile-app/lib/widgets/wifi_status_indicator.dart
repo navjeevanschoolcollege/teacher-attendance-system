@@ -81,3 +81,4 @@ class WiFiStatusIndicator extends StatelessWidget {
     );
   }
 }
+

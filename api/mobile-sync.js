@@ -143,3 +143,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to sync attendance', message: err.message });
   }
 };
+
