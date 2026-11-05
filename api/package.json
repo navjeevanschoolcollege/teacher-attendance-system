@@ -1,0 +1,8 @@
+{
+  "name": "teacher-attendance-api",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "exceljs": "^4.4.0"
+  }
+}

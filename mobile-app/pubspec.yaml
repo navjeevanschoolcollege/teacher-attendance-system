@@ -1,0 +1,32 @@
+name: campus_attendance
+description: Campus WiFi Teacher Attendance System
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.3.0
+  network_info_plus: ^5.0.0
+  connectivity_plus: ^5.0.0
+  workmanager: ^0.5.2
+  shared_preferences: ^2.2.0
+  flutter_local_notifications: ^17.0.0
+  permission_handler: ^11.1.0
+  device_info_plus: ^10.0.0
+  intl: ^0.19.0
+  sqflite: ^2.3.0
+  path: ^1.8.0
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
