@@ -10,11 +10,34 @@ const statusConfig = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500', label: 'Pending' },
   approved: { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500', label: 'Approved' },
   rejected: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', label: 'Rejected' },
+  'wifi_off_-_on_campus_(gps)': {
+    bg: 'bg-indigo-100',
+    text: 'text-indigo-800 font-semibold',
+    dot: 'bg-indigo-600 animate-pulse',
+    label: 'WiFi Off - On Campus (GPS)'
+  },
+  'incomplete_/_needs_review': {
+    bg: 'bg-amber-100',
+    text: 'text-amber-900 font-semibold',
+    dot: 'bg-amber-600',
+    label: 'Incomplete / Needs Review'
+  },
+  'gps_backup': {
+    bg: 'bg-teal-100',
+    text: 'text-teal-800',
+    dot: 'bg-teal-500',
+    label: 'GPS Backup'
+  }
 };
 
 function StatusBadge({ status, className = '' }) {
   const normalizedStatus = (status || 'absent').toLowerCase().replace(/\s+/g, '_');
-  const config = statusConfig[normalizedStatus] || statusConfig.absent;
+  const config = statusConfig[normalizedStatus] || {
+    bg: 'bg-slate-100',
+    text: 'text-slate-700',
+    dot: 'bg-slate-400',
+    label: status || 'Unknown'
+  };
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} ${className}`}>

@@ -14,11 +14,11 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { date, from_date, to_date, teacher_id, department } = req.query || {};
+    const { date, from_date, to_date, teacher_id, department, shift } = req.query || {};
 
     let query = supabase
       .from('attendance')
-      .select('*, teachers(full_name, department, designation, subject, phone, email)')
+      .select('*, teachers(full_name, department, designation, subject, phone, email, shift)')
       .order('date', { ascending: false })
       .order('in_time', { ascending: true });
 
@@ -33,8 +33,8 @@ module.exports = async function handler(req, res) {
       query = query.eq('teacher_id', teacher_id);
     }
 
-    if (department) {
-      query = query.eq('teachers.department', department);
+    if (shift && shift !== 'All') {
+      query = query.eq('shift', shift);
     }
 
     const { data, error } = await query;
@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
     if (error) return res.status(500).json({ error: 'Failed to fetch attendance', details: error.message });
 
     // Flatten teacher info into each record for convenience
-    const records = (data || []).map(row => {
+    let records = (data || []).map(row => {
       const teacher = row.teachers || {};
       return {
         ...row,
@@ -52,9 +52,14 @@ module.exports = async function handler(req, res) {
         subject: teacher.subject || '',
         phone: teacher.phone || '',
         email: teacher.email || '',
-        teachers: undefined, // remove nested object
+        teacher_assigned_shift: teacher.shift || 'Shift One',
+        teachers: undefined,
       };
     });
+
+    if (department && department !== 'All') {
+      records = records.filter(r => r.department === department);
+    }
 
     return res.status(200).json({ success: true, count: records.length, records });
   } catch (err) {

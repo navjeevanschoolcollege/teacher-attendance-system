@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
 
       // ── POST: create new teacher ────────────────────────────────────────────
       case 'POST': {
-        const { teacher_id, full_name, department, designation, subject, phone, email } = req.body || {};
+        const { teacher_id, full_name, department, designation, subject, phone, email, shift = 'Shift One', role = 'teacher' } = req.body || {};
 
         if (!teacher_id || !full_name) {
           return res.status(400).json({ error: 'teacher_id and full_name are required' });
@@ -50,12 +50,14 @@ module.exports = async function handler(req, res) {
             subject: subject || null,
             phone: phone || null,
             email: email || null,
+            shift: ['Shift One', 'Shift Two', 'Both'].includes(shift) ? shift : 'Shift One',
+            role: role || 'teacher'
           })
           .select()
           .single();
 
         if (error) {
-          if (error.code === '23505') return res.status(409).json({ error: 'Teacher ID already exists' });
+          if (error.code === '23505') return res.status(409).json({ error: 'Teacher ID or Email already exists' });
           return res.status(500).json({ error: 'Failed to create teacher', details: error.message });
         }
 
@@ -68,7 +70,6 @@ module.exports = async function handler(req, res) {
 
         if (!teacher_id) return res.status(400).json({ error: 'teacher_id is required' });
 
-        // Remove undefined/null keys
         const cleanUpdates = {};
         for (const [k, v] of Object.entries(updates)) {
           if (v !== undefined) cleanUpdates[k] = v;
@@ -92,16 +93,14 @@ module.exports = async function handler(req, res) {
 
         if (!teacher_id) return res.status(400).json({ error: 'teacher_id is required' });
 
-        // Delete cascading: devices, attendance, leaves, then teacher
         await supabase.from('devices').delete().eq('teacher_id', teacher_id);
         await supabase.from('attendance').delete().eq('teacher_id', teacher_id);
         await supabase.from('leaves').delete().eq('teacher_id', teacher_id);
 
         const { error } = await supabase.from('teachers').delete().eq('teacher_id', teacher_id);
-
         if (error) return res.status(500).json({ error: 'Failed to delete teacher', details: error.message });
 
-        return res.status(200).json({ success: true, message: `Teacher ${teacher_id} deleted successfully` });
+        return res.status(200).json({ success: true, message: `Teacher ${teacher_id} removed` });
       }
 
       default:

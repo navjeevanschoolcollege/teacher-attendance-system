@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CalendarDays,
   User,
+  FileEdit,
   LogOut,
   Menu,
   X,
@@ -18,6 +19,7 @@ import TeacherDashboard from '../components/teacher/TeacherDashboard';
 import MyAttendance from '../components/teacher/MyAttendance';
 import ApplyLeave from '../components/teacher/ApplyLeave';
 import MyProfile from '../components/teacher/MyProfile';
+import RequestCorrection from '../components/teacher/RequestCorrection';
 
 export default function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,6 +35,7 @@ export default function TeacherLayout() {
   const navItems = [
     { label: 'My Status & Check-In', path: '/teacher', icon: LayoutDashboard, exact: true },
     { label: 'My Attendance Calendar', path: '/teacher/attendance', icon: CalendarCheck },
+    { label: 'Dispute / Correction', path: '/teacher/correction', icon: FileEdit },
     { label: 'Apply Leave', path: '/teacher/leave', icon: CalendarDays },
     { label: 'My Profile & Device', path: '/teacher/profile', icon: User },
   ];
@@ -158,6 +161,7 @@ export default function TeacherLayout() {
           <Routes>
             <Route index element={<TeacherDashboard />} />
             <Route path="attendance" element={<MyAttendance />} />
+            <Route path="correction" element={<RequestCorrection />} />
             <Route path="leave" element={<ApplyLeave />} />
             <Route path="profile" element={<MyProfile />} />
           </Routes>

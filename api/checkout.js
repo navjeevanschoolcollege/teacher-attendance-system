@@ -34,14 +34,9 @@ function todayIST() {
 }
 
 function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
   const [h, m] = timeStr.split(':').map(Number);
   return h * 60 + m;
-}
-
-function diffHoursMinutes(start, end) {
-  const diffMs = end.getTime() - start.getTime();
-  const totalMins = Math.floor(diffMs / 60000);
-  return { hours: Math.floor(totalMins / 60), minutes: totalMins % 60, totalMinutes: totalMins };
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -51,7 +46,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { teacher_id, ip_address } = req.body || {};
+    const { teacher_id, ip_address, shift } = req.body || {};
     if (!teacher_id) return res.status(400).json({ error: 'teacher_id is required' });
 
     // ── Fetch wifi settings ───────────────────────────────────────────────────
@@ -72,65 +67,83 @@ module.exports = async function handler(req, res) {
 
     const today = todayIST();
     const now = nowIST();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // ── Find today's attendance ───────────────────────────────────────────────
-    const { data: existing, error: aErr } = await supabase
+    // ── Campus Movement Tracker: Query last event from movement_log ───────────
+    let moveQuery = supabase
+      .from('movement_log')
+      .select('*')
+      .eq('teacher_id', teacher_id)
+      .eq('date', today);
+
+    if (shift) {
+      moveQuery = moveQuery.eq('shift', shift);
+    }
+
+    const { data: moveHistory, error: mhErr } = await moveQuery.order('event_time', { ascending: false }).order('event_no', { ascending: false }).limit(1);
+    if (mhErr) return res.status(500).json({ error: 'Failed to query movement history', details: mhErr.message });
+
+    const lastEvent = moveHistory && moveHistory.length > 0 ? moveHistory[0] : null;
+
+    if (!lastEvent || lastEvent.event_type !== 'IN') {
+      return res.status(400).json({
+        error: 'Teacher is already marked Outside Campus or has not checked in today.',
+        last_event: lastEvent
+      });
+    }
+
+    const outTimeISO = new Date().toISOString();
+    const inTime = new Date(lastEvent.event_time);
+    const stayMinutes = Math.max(0, Math.round((new Date(outTimeISO) - inTime) / 60000));
+    const effectiveShift = lastEvent.shift;
+
+    const outPayload = {
+      teacher_id,
+      date: today,
+      shift: effectiveShift,
+      event_no: lastEvent.event_no + 1,
+      event_type: 'OUT',
+      event_time: outTimeISO,
+      session_no: lastEvent.session_no,
+      stay_duration_minutes: stayMinutes,
+      ssid: lastEvent.ssid,
+      bssid: lastEvent.bssid,
+      ip_address: ip_address || lastEvent.ip_address,
+      mobile_name: lastEvent.mobile_name,
+      mac_address: lastEvent.mac_address,
+      device_id: lastEvent.device_id,
+      mode: 'Manual-Web',
+      remarks: `Session #${lastEvent.session_no} Completed (${Math.floor(stayMinutes / 60)}h ${stayMinutes % 60}m Inside)`
+    };
+
+    const { data: insertedOut, error: outErr } = await supabase
+      .from('movement_log')
+      .insert(outPayload)
+      .select()
+      .single();
+
+    if (outErr) {
+      console.error('Failed to insert movement_log checkout:', outErr);
+      return res.status(500).json({ error: 'Failed to record checkout event', details: outErr.message });
+    }
+
+    // Fetch synchronized attendance summary
+    const { data: syncedRecord } = await supabase
       .from('attendance')
       .select('*')
       .eq('teacher_id', teacher_id)
       .eq('date', today)
+      .eq('shift', effectiveShift)
       .maybeSingle();
-
-    if (aErr) return res.status(500).json({ error: 'Failed to query attendance', details: aErr.message });
-    if (!existing || !existing.in_time) {
-      return res.status(400).json({ error: 'No check-in record found for today. Please check in first.' });
-    }
-    if (existing.out_time) {
-      return res.status(409).json({ error: 'Already checked out for today', record: existing });
-    }
-
-    // ── Calculate hours & early-out ───────────────────────────────────────────
-    const outTimeISO = new Date().toISOString();
-    const inTime = new Date(existing.in_time);
-    const outTime = new Date(outTimeISO);
-    const { hours, minutes, totalMinutes } = diffHoursMinutes(inTime, outTime);
-    const totalHoursStr = `${hours}h ${String(minutes).padStart(2, '0')}m`;
-
-    // Early out calculation
-    const endMinutes = settings.end_time ? timeToMinutes(settings.end_time) : 17 * 60; // default 17:00
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    let early_out_by_minutes = 0;
-    if (currentMinutes < endMinutes) {
-      early_out_by_minutes = endMinutes - currentMinutes;
-    }
-
-    // Update status if half-day based on total hours
-    let status = existing.status;
-    if (totalMinutes < 240 && status === 'Present') {
-      // Less than 4 hours worked → half day
-      status = 'Half Day';
-    }
-
-    const { data: updated, error: uErr } = await supabase
-      .from('attendance')
-      .update({
-        out_time: outTimeISO,
-        total_hours: totalHoursStr,
-        early_out_by_minutes,
-        status,
-        ip_address: ip_address || existing.ip_address,
-      })
-      .eq('id', existing.id)
-      .select()
-      .single();
-
-    if (uErr) return res.status(500).json({ error: 'Failed to update attendance', details: uErr.message });
 
     return res.status(200).json({
       success: true,
-      message: `Checked out successfully. Total hours: ${totalHoursStr}`,
-      record: updated,
+      message: `Exit (OUT) recorded for ${effectiveShift}. Stay: ${Math.floor(stayMinutes / 60)}h ${stayMinutes % 60}m. Current status: Outside Campus.`,
+      shift: effectiveShift,
+      event: insertedOut,
+      record: syncedRecord
     });
+
   } catch (err) {
     console.error('checkout error:', err);
     return res.status(500).json({ error: 'Internal server error', details: err.message });

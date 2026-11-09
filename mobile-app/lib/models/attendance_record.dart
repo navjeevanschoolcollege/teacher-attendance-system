@@ -5,34 +5,36 @@ class AttendanceRecord {
   final String? id;
   final String teacherId;
   final DateTime date;
+  final String shift; // Shift One, Shift Two
   final DateTime? inTime;
   final DateTime? outTime;
   final double? totalHours;
-  final String status; // present, late, absent, on leave, half day
+  final String status; // Present, Late, Absent, On Leave, Half Day
   final int? lateByMinutes;
   final int? earlyOutByMinutes;
   final String? mobileName;
   final String? macAddress;
   final String? ipAddress;
   final String? ssid;
-  final String mode; // auto, manual
+  final String mode; // Auto-WiFi, Manual-Web, Admin, GPS Backup
   final String? remarks;
 
   AttendanceRecord({
     this.id,
     required this.teacherId,
     required this.date,
+    this.shift = 'Shift One',
     this.inTime,
     this.outTime,
     this.totalHours,
-    this.status = 'present',
+    this.status = 'Present',
     this.lateByMinutes,
     this.earlyOutByMinutes,
     this.mobileName,
     this.macAddress,
     this.ipAddress,
     this.ssid,
-    this.mode = 'auto',
+    this.mode = 'Auto-WiFi',
     this.remarks,
   });
 
@@ -42,19 +44,20 @@ class AttendanceRecord {
       id: json['id']?.toString(),
       teacherId: json['teacher_id'] as String,
       date: DateTime.parse(json['date'] as String),
+      shift: (json['shift'] as String?) ?? 'Shift One',
       inTime: json['in_time'] != null ? DateTime.parse(json['in_time'] as String) : null,
       outTime: json['out_time'] != null ? DateTime.parse(json['out_time'] as String) : null,
       totalHours: json['total_hours'] != null
           ? (json['total_hours'] as num).toDouble()
           : null,
-      status: (json['status'] as String?) ?? 'present',
+      status: (json['status'] as String?) ?? 'Present',
       lateByMinutes: json['late_by_minutes'] as int?,
       earlyOutByMinutes: json['early_out_by_minutes'] as int?,
       mobileName: json['mobile_name'] as String?,
       macAddress: json['mac_address'] as String?,
       ipAddress: json['ip_address'] as String?,
       ssid: json['ssid'] as String?,
-      mode: (json['mode'] as String?) ?? 'auto',
+      mode: (json['mode'] as String?) ?? 'Auto-WiFi',
       remarks: json['remarks'] as String?,
     );
   }
@@ -65,6 +68,7 @@ class AttendanceRecord {
       if (id != null) 'id': id,
       'teacher_id': teacherId,
       'date': date.toIso8601String().substring(0, 10),
+      'shift': shift,
       'in_time': inTime?.toIso8601String(),
       'out_time': outTime?.toIso8601String(),
       'total_hours': totalHours,
@@ -85,6 +89,7 @@ class AttendanceRecord {
     String? id,
     String? teacherId,
     DateTime? date,
+    String? shift,
     DateTime? inTime,
     DateTime? outTime,
     double? totalHours,
@@ -102,6 +107,7 @@ class AttendanceRecord {
       id: id ?? this.id,
       teacherId: teacherId ?? this.teacherId,
       date: date ?? this.date,
+      shift: shift ?? this.shift,
       inTime: inTime ?? this.inTime,
       outTime: outTime ?? this.outTime,
       totalHours: totalHours ?? this.totalHours,

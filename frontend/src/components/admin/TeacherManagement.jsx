@@ -10,6 +10,7 @@ export default function TeacherManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
+  const [selectedShift, setSelectedShift] = useState('All');
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,8 +23,7 @@ export default function TeacherManagement() {
     subject: '',
     phone: '',
     email: '',
-    shift_start: '09:00:00',
-    shift_end: '16:00:00',
+    shift: 'Shift One',
     status: 'Active',
     role: 'teacher'
   });
@@ -59,8 +59,7 @@ export default function TeacherManagement() {
       subject: '',
       phone: '',
       email: '',
-      shift_start: '09:00:00',
-      shift_end: '16:00:00',
+      shift: 'Shift One',
       status: 'Active',
       role: 'teacher'
     });
@@ -77,8 +76,7 @@ export default function TeacherManagement() {
       subject: teacher.subject || '',
       phone: teacher.phone || '',
       email: teacher.email,
-      shift_start: teacher.shift_start || '09:00:00',
-      shift_end: teacher.shift_end || '16:00:00',
+      shift: teacher.shift || 'Shift One',
       status: teacher.status || 'Active',
       role: teacher.role || 'teacher'
     });
@@ -90,7 +88,6 @@ export default function TeacherManagement() {
     setSaving(true);
     try {
       if (editingTeacher) {
-        // Update
         const { error } = await supabase
           .from('teachers')
           .update(formData)
@@ -98,33 +95,29 @@ export default function TeacherManagement() {
         if (error) throw error;
         toast.success('Teacher updated successfully');
       } else {
-        // Insert
         const { error } = await supabase
           .from('teachers')
           .insert([formData]);
         if (error) throw error;
-        toast.success('Teacher added successfully');
+        toast.success('Teacher registered successfully');
       }
       setIsModalOpen(false);
       fetchTeachers();
     } catch (err) {
-      toast.error('Save failed: ' + err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (teacher_id) => {
-    if (!window.confirm(`Are you sure you want to delete teacher ${teacher_id}? This will remove attendance history and device records.`)) {
+  const handleDelete = async (teacherId) => {
+    if (!window.confirm(`Are you sure you want to delete teacher ${teacherId}? This will remove all their records.`)) {
       return;
     }
     try {
-      const { error } = await supabase
-        .from('teachers')
-        .delete()
-        .eq('teacher_id', teacher_id);
+      const { error } = await supabase.from('teachers').delete().eq('teacher_id', teacherId);
       if (error) throw error;
-      toast.success('Teacher deleted successfully');
+      toast.success(`Teacher ${teacherId} removed`);
       fetchTeachers();
     } catch (err) {
       toast.error('Delete failed: ' + err.message);
@@ -139,7 +132,8 @@ export default function TeacherManagement() {
       t.teacher_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDept = selectedDept === 'All' || t.department === selectedDept;
-    return matchesSearch && matchesDept;
+    const matchesShift = selectedShift === 'All' || t.shift === selectedShift;
+    return matchesSearch && matchesDept && matchesShift;
   });
 
   return (
@@ -147,126 +141,158 @@ export default function TeacherManagement() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Faculty & Teacher Management</h2>
-          <p className="text-xs text-slate-500">Add, edit, or configure teachers, designations, and shifts</p>
+          <h2 className="text-xl font-bold text-slate-800">Faculty Management</h2>
+          <p className="text-xs text-slate-500">
+            Add, update, assign shifts, and manage faculty credentials & mobile devices
+          </p>
         </div>
         <button
           onClick={openAddModal}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
         >
           <Plus className="w-4 h-4" />
-          <span>Add New Teacher</span>
+          <span>Add Faculty Member</span>
         </button>
       </div>
 
-      {/* Filter / Search Bar */}
+      {/* Filter and Search Bar */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
+            placeholder="Search by name, ID, or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, ID, or email..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <label className="text-xs text-slate-500 font-medium">Department:</label>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Shift Filter */}
+          <select
+            value={selectedShift}
+            onChange={(e) => setSelectedShift(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+          >
+            <option value="All">All Shifts</option>
+            <option value="Shift One">Shift One (07:15 - 12:30)</option>
+            <option value="Shift Two">Shift Two (12:30 - 17:00)</option>
+            <option value="Both">Both Shifts</option>
+          </select>
+
+          {/* Department Filter */}
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full sm:w-auto px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {departments.map(d => (
-              <option key={d} value={d}>{d}</option>
+            {departments.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept === 'All' ? 'All Departments' : dept}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
       {/* Teachers Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-12 text-center">
             <LoadingSpinner size="md" />
-            <p className="text-xs text-slate-400 mt-2">Loading teachers list...</p>
+            <p className="text-xs text-slate-400 mt-2">Loading faculty list...</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">ID</th>
-                  <th className="py-3 px-4">Teacher Name</th>
+                  <th className="py-3 px-4">Faculty Name</th>
+                  <th className="py-3 px-4">Assigned Shift</th>
                   <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4">Designation</th>
-                  <th className="py-3 px-4">Subject</th>
                   <th className="py-3 px-4">Contact</th>
-                  <th className="py-3 px-4">Registered Device</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4">Registered Mobile</th>
+                  <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredTeachers.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="py-8 text-center text-slate-400">
-                      No teachers found
+                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                      No faculty members found
                     </td>
                   </tr>
                 ) : (
                   filteredTeachers.map((t) => {
-                    const dev = t.devices?.[0];
+                    const dev = t.devices && t.devices.length > 0 ? t.devices[0] : null;
                     return (
-                      <tr key={t.id || t.teacher_id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-blue-600">{t.teacher_id}</td>
-                        <td className="py-3 px-4 font-medium text-slate-900">
-                          {t.full_name}
-                          {t.role === 'admin' && (
-                            <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 font-semibold px-1.5 py-0.5 rounded">
-                              Admin
-                            </span>
-                          )}
+                      <tr key={t.teacher_id} className="hover:bg-slate-50 transition">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          {t.teacher_id}
                         </td>
-                        <td className="py-3 px-4 text-slate-600 font-medium">{t.department}</td>
-                        <td className="py-3 px-4 text-slate-500">{t.designation || '-'}</td>
-                        <td className="py-3 px-4 text-slate-500">{t.subject || '-'}</td>
-                        <td className="py-3 px-4 text-slate-500">
-                          <div>{t.email}</div>
-                          <div className="text-[10px] text-slate-400">{t.phone || '-'}</div>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900">{t.full_name}</div>
+                          <div className="text-[11px] text-slate-400">{t.designation || 'Faculty'}</div>
                         </td>
-                        <td className="py-3 px-4 text-slate-500">
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            t.shift === 'Shift Two'
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                              : t.shift === 'Both'
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {t.shift || 'Shift One'}
+                          </span>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {t.shift === 'Shift Two'
+                              ? '12:30 - 17:00'
+                              : t.shift === 'Both'
+                              ? 'Both Shifts'
+                              : '07:15 - 12:30'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-slate-800 font-medium">{t.department}</div>
+                          <div className="text-[11px] text-slate-400">{t.subject || '-'}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-slate-800">{t.email}</div>
+                          <div className="text-[11px] text-slate-400">{t.phone || '-'}</div>
+                        </td>
+                        <td className="py-3 px-4">
                           {dev ? (
                             <div className="flex items-center gap-1.5">
-                              <Smartphone className="w-3.5 h-3.5 text-slate-400" />
+                              <Smartphone className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                               <div>
-                                <span className="font-medium text-slate-700">{dev.mobile_name}</span>
-                                <span className="block font-mono text-[10px] text-slate-400">{dev.mac_address}</span>
+                                <span className="font-medium text-slate-800 block">{dev.mobile_name || 'Mobile Phone'}</span>
+                                <span className="text-[10px] font-mono text-slate-400 block">{dev.mac_address || dev.mobile_model || '-'}</span>
                               </div>
                             </div>
                           ) : (
-                            <span className="text-[11px] text-slate-400 italic">No device registered</span>
+                            <span className="text-[11px] text-slate-400 italic">No device bound</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                               t.status === 'Active'
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
                             }`}
                           >
                             {t.status === 'Active' ? (
-                              <CheckCircle2 className="w-3 h-3" />
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             ) : (
-                              <XCircle className="w-3 h-3" />
+                              <XCircle className="w-3 h-3 text-slate-400" />
                             )}
                             {t.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right space-x-2">
+                        <td className="py-3 px-4 text-right space-x-1">
                           <button
                             onClick={() => openEditModal(t)}
                             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition"
@@ -383,25 +409,21 @@ export default function TeacherManagement() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Shift Start Time</label>
-              <input
-                type="time"
-                value={formData.shift_start}
-                onChange={(e) => setFormData({ ...formData, shift_start: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Shift End Time</label>
-              <input
-                type="time"
-                value={formData.shift_end}
-                onChange={(e) => setFormData({ ...formData, shift_end: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-            </div>
+          {/* Assigned Shift Selection */}
+          <div>
+            <label className="block font-bold text-slate-800 mb-1">Assigned Shift *</label>
+            <select
+              value={formData.shift}
+              onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-lg border border-blue-300 bg-blue-50/50 font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              <option value="Shift One">Shift One (07:15 AM to 12:30 PM — 5h 15m)</option>
+              <option value="Shift Two">Shift Two (12:30 PM to 05:00 PM — 4h 30m)</option>
+              <option value="Both">Both Shifts (Shift One + Shift Two — 2 records/day)</option>
+            </select>
+            <span className="text-[11px] text-slate-400 mt-1 block">
+              Teachers assigned "Both" will have separate daily attendance records for each shift.
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -424,25 +446,25 @@ export default function TeacherManagement() {
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
               >
                 <option value="teacher">Teacher</option>
-                <option value="admin">Admin</option>
+                <option value="admin">Admin / HOD</option>
               </select>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition"
+              className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-60 font-semibold"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition disabled:opacity-60"
             >
-              {saving ? 'Saving...' : 'Save Teacher'}
+              {saving ? 'Saving...' : editingTeacher ? 'Update Teacher' : 'Register Teacher'}
             </button>
           </div>
         </form>
@@ -450,4 +472,3 @@ export default function TeacherManagement() {
     </div>
   );
 }
-

@@ -86,3 +86,4 @@ CREATE POLICY "Allow admin manage holidays" ON holidays FOR ALL USING (is_admin(
 -- WIFI SETTINGS
 CREATE POLICY "Allow select wifi_settings" ON wifi_settings FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage wifi_settings" ON wifi_settings FOR ALL USING (is_admin() OR auth.role() = 'service_role');
+

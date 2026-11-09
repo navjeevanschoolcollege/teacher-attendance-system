@@ -217,7 +217,14 @@ export default function MyAttendance() {
             <div className="font-bold text-sm text-blue-900">
               Details for {selectedDayRecord.date}
             </div>
-            <StatusBadge status={selectedDayRecord.status} />
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                selectedDayRecord.shift === 'Shift Two' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800'
+              }`}>
+                {selectedDayRecord.shift || 'Shift One'}
+              </span>
+              <StatusBadge status={selectedDayRecord.status} />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-blue-950">

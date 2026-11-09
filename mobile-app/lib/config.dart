@@ -1,29 +1,35 @@
 /// Application configuration constants.
-/// Update [supabaseUrl] and [supabaseAnonKey] before building the APK.
 class AppConfig {
   // ── Supabase credentials ─────────────────────────────────────────────
   static const String supabaseUrl = 'https://qfiyjeapsfzrabplihbj.supabase.co';
   static const String supabaseAnonKey = 'sb_publishable_pm2xD8KUeQtQCBUgVaeENg_phW-cJ0L';
 
   // ── WiFi check intervals ────────────────────────────────────────────
-  /// How often the foreground timer polls WiFi (in minutes).
+  /// Foreground timer polls WiFi every 2 minutes
   static const int wifiCheckIntervalMinutes = 2;
 
-  /// Minutes of WiFi disconnection before auto check-out.
+  /// Ignore brief disconnects under 3 minutes (weak signal / changing rooms)
+  static const int briefDisconnectIgnoreMinutes = 3;
+
+  /// Disconnect grace period threshold before auto check-out (15 minutes)
   static const int disconnectThresholdMinutes = 15;
 
-  // ── WorkManager ──────────────────────────────────────────────────────
-  /// Unique name used by WorkManager for the periodic task.
-  static const String backgroundTaskName = 'campusWifiCheck';
+  /// Notification interval during disconnect warning (every 5 minutes)
+  static const int disconnectWarningIntervalMinutes = 5;
 
-  /// Unique tag used to identify our periodic task.
+  // ── Campus Geofence Coordinates (Default campus center) ───────────────
+  static const double defaultCampusLat = 17.5449;
+  static const double defaultCampusLng = 78.5718;
+  static const int defaultGeofenceRadiusMeters = 200;
+
+  // ── WorkManager ──────────────────────────────────────────────────────
+  static const String backgroundTaskName = 'campusWifiCheck';
   static const String backgroundTaskTag = 'campus_attendance_wifi';
 
   // ── IST offset ───────────────────────────────────────────────────────
-  /// Indian Standard Time offset from UTC.
   static const Duration istOffset = Duration(hours: 5, minutes: 30);
 
-  /// Returns the current time in IST regardless of device timezone.
+  /// Returns current time in IST regardless of phone clock tampering
   static DateTime nowIST() {
     return DateTime.now().toUtc().add(istOffset);
   }
@@ -32,29 +38,53 @@ class AppConfig {
   static const String prefTeacherId = 'teacher_id';
   static const String prefTeacherEmail = 'teacher_email';
   static const String prefTeacherName = 'teacher_name';
+  static const String prefTeacherShift = 'teacher_shift'; // 'Shift One', 'Shift Two', 'Both'
+  static const String prefDeviceUuid = 'device_uuid';
   static const String prefCampusSsid = 'campus_ssid';
   static const String prefAllowedBssids = 'allowed_bssids';
+  static const String prefCampusLat = 'campus_lat';
+  static const String prefCampusLng = 'campus_lng';
+  static const String prefGeofenceRadius = 'geofence_radius';
   static const String prefDemoMode = 'demo_mode';
   static const String prefDemoSsid = 'demo_ssid';
   static const String prefLastConnectedTime = 'last_connected_time';
+  static const String prefLastDisconnectWarningTime = 'last_disconnect_warning_time';
   static const String prefLoggedIn = 'logged_in';
   static const String prefRememberMe = 'remember_me';
   static const String prefDeviceRegistered = 'device_registered';
+  static const String prefBatteryOptimizationDone = 'battery_optimization_done';
+  static const String prefShiftOneReminderDate = 'shift_one_reminder_date';
+  static const String prefShiftTwoReminderDate = 'shift_two_reminder_date';
 
-  /// Key pattern: `checked_in_2024-01-15`
-  static String checkedInKey(DateTime date) =>
-      'checked_in_${date.toIso8601String().substring(0, 10)}';
+  static String checkedInKey(DateTime date, [String shift = 'Shift One']) =>
+      'checked_in_${shift.replaceAll(' ', '_')}_${date.toIso8601String().substring(0, 10)}';
 
-  /// Key pattern: `checked_out_2024-01-15`
-  static String checkedOutKey(DateTime date) =>
-      'checked_out_${date.toIso8601String().substring(0, 10)}';
+  static String checkedOutKey(DateTime date, [String shift = 'Shift One']) =>
+      'checked_out_${shift.replaceAll(' ', '_')}_${date.toIso8601String().substring(0, 10)}';
 
-  // ── Defaults ─────────────────────────────────────────────────────────
-  /// Default expected in-time (09:00 IST) – used for late calculation.
-  static const int expectedInHour = 9;
-  static const int expectedInMinute = 0;
+  // ── TWO SHIFTS EXACT TIMINGS ─────────────────────────────────────────
+  // Shift One: 07:15 AM to 12:30 PM (5h 15m)
+  static const int shiftOneStartHour = 7;
+  static const int shiftOneStartMinute = 15;
+  static const int shiftOneEndHour = 12;
+  static const int shiftOneEndMinute = 30;
+  static const int shiftOneInWindowStartHour = 6;
+  static const int shiftOneInWindowStartMinute = 45;
+  static const int shiftOneReminderHour = 7;
+  static const int shiftOneReminderMinute = 0;
+  static const double shiftOneHalfDayHours = 2.50; // < 2h 30m = Half Day
 
-  /// Default expected out-time (17:00 IST) – used for early-out calc.
-  static const int expectedOutHour = 17;
-  static const int expectedOutMinute = 0;
+  // Shift Two: 12:30 PM to 05:00 PM (4h 30m)
+  static const int shiftTwoStartHour = 12;
+  static const int shiftTwoStartMinute = 30;
+  static const int shiftTwoEndHour = 17;
+  static const int shiftTwoEndMinute = 0;
+  static const int shiftTwoInWindowStartHour = 12;
+  static const int shiftTwoInWindowStartMinute = 0;
+  static const int shiftTwoReminderHour = 12;
+  static const int shiftTwoReminderMinute = 15;
+  static const double shiftTwoHalfDayHours = 2.25; // < 2h 15m = Half Day
+
+  // Grace Period: 10 minutes for both shifts
+  static const int graceMinutes = 10;
 }

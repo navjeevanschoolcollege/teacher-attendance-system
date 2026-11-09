@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _teacherId = '';
   String _teacherName = '';
   String _teacherEmail = '';
+  String _teacherShift = 'Shift One';
 
   // WiFi & Attendance State
   String? _currentSsid;
@@ -72,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _teacherId = prefs.getString(AppConfig.prefTeacherId) ?? 'T001';
       _teacherName = prefs.getString(AppConfig.prefTeacherName) ?? 'Faculty Member';
       _teacherEmail = prefs.getString(AppConfig.prefTeacherEmail) ?? '';
+      _teacherShift = prefs.getString(AppConfig.prefTeacherShift) ?? 'Shift One';
       _campusSsid = prefs.getString(AppConfig.prefCampusSsid) ?? 'Woxsen_Campus_WiFi';
     });
 
@@ -280,6 +282,69 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // My Assigned Shift Card
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.access_time_filled, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'ASSIGNED SHIFT',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            letterSpacing: 1.1,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _teacherShift == 'Shift Two'
+                              ? 'My Shift: Shift Two, 12:30 PM - 05:00 PM'
+                              : _teacherShift == 'Both'
+                                  ? 'My Shift: Both Shifts (07:15 AM - 05:00 PM)'
+                                  : 'My Shift: Shift One, 07:15 AM - 12:30 PM',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
             // WiFi Status Indicator
             WiFiStatusIndicator(
               currentSsid: _currentSsid,
@@ -301,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFF22C55E),
                     subtitle: _todayRecord?.lateByMinutes != null && _todayRecord!.lateByMinutes! > 0
                         ? '+${_todayRecord!.lateByMinutes}m Late'
-                        : 'Scheduled: 09:00',
+                        : (_teacherShift == 'Shift Two' ? 'Scheduled: 12:30' : 'Scheduled: 07:15'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -315,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFFEF4444),
                     subtitle: _todayRecord?.totalHours != null
                         ? '${_todayRecord!.totalHours} hrs worked'
-                        : 'Scheduled: 16:00',
+                        : (_teacherShift == 'Shift Two' ? 'Scheduled: 17:00' : 'Scheduled: 12:30'),
                   ),
                 ),
               ],

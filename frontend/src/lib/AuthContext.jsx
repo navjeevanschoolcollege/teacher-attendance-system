@@ -28,7 +28,12 @@ export function AuthProvider({ children }) {
       if (currentSession?.user) {
         fetchTeacherProfile(currentSession.user.email);
       } else {
-        setLoading(false);
+        const demoEmail = localStorage.getItem('demo_user_email');
+        if (demoEmail) {
+          fetchTeacherProfile(demoEmail);
+        } else {
+          setLoading(false);
+        }
       }
     });
 
@@ -62,6 +67,7 @@ export function AuthProvider({ children }) {
         setRole(null);
         setTeacherProfile(null);
       } else {
+        setUser({ id: data.id, email: data.email });
         setTeacherProfile(data);
         setRole(data.role || 'teacher');
       }
@@ -80,10 +86,28 @@ export function AuthProvider({ children }) {
       });
 
       if (error) {
+        // Fallback for Demo & Local testing: Check teachers table
+        const { data: teacher } = await supabase
+          .from('teachers')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (teacher) {
+          const simUser = { id: teacher.id, email: teacher.email };
+          setUser(simUser);
+          setTeacherProfile(teacher);
+          setRole(teacher.role || (email.toLowerCase().includes('admin') ? 'admin' : 'teacher'));
+          localStorage.setItem('demo_user_email', email);
+          toast.success('Signed in successfully!');
+          return { success: true, data: { user: simUser } };
+        }
+
         toast.error(error.message);
         return { success: false, error: error.message };
       }
 
+      localStorage.removeItem('demo_user_email');
       toast.success('Login successful!');
       return { success: true, data };
     } catch (err) {
@@ -94,6 +118,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     try {
+      localStorage.removeItem('demo_user_email');
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);

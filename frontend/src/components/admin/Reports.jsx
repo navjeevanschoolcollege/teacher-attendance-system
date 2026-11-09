@@ -24,6 +24,7 @@ export default function Reports() {
   const [fromDate, setFromDate] = useState(todayIST());
   const [toDate, setToDate] = useState(todayIST());
   const [selectedDept, setSelectedDept] = useState('All');
+  const [selectedShift, setSelectedShift] = useState('All');
 
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState([]);
@@ -51,30 +52,44 @@ export default function Reports() {
         attQuery = attQuery.gte('date', fromDate).lte('date', toDate);
       }
 
+      if (selectedShift !== 'All') {
+        attQuery = attQuery.eq('shift', selectedShift);
+      }
+
       const { data: attendance, error: aErr } = await attQuery;
       if (aErr) throw aErr;
 
-      // Group by teacher
+      // Group by (Teacher ID + Shift)
       const map = {};
       (teachers || []).forEach(t => {
-        map[t.teacher_id] = {
-          teacher_id: t.teacher_id,
-          full_name: t.full_name,
-          department: t.department,
-          designation: t.designation,
-          total_days: 0,
-          present: 0,
-          late: 0,
-          half_day: 0,
-          absent: 0,
-          on_leave: 0,
-          total_hours: 0
-        };
+        const assigned = t.shift || 'Shift One';
+        const shifts = assigned === 'Both' ? ['Shift One', 'Shift Two'] : [assigned];
+        shifts.forEach(s => {
+          if (selectedShift === 'All' || selectedShift === s) {
+            const key = `${t.teacher_id}_${s}`;
+            map[key] = {
+              teacher_id: t.teacher_id,
+              full_name: t.full_name,
+              shift: s,
+              department: t.department,
+              designation: t.designation,
+              total_days: 0,
+              present: 0,
+              late: 0,
+              half_day: 0,
+              absent: 0,
+              on_leave: 0,
+              total_hours: 0
+            };
+          }
+        });
       });
 
       (attendance || []).forEach(a => {
-        if (map[a.teacher_id]) {
-          const item = map[a.teacher_id];
+        const s = a.shift || 'Shift One';
+        const key = `${a.teacher_id}_${s}`;
+        if (map[key]) {
+          const item = map[key];
           item.total_days += 1;
           if (a.status === 'Present') item.present += 1;
           else if (a.status === 'Late') item.late += 1;
@@ -95,130 +110,137 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReportData();
-  }, [reportType, date, month, fromDate, toDate]);
+  }, [reportType, date, month, fromDate, toDate, selectedShift]);
 
   const handleDownload = () => {
     let url = '/api/export-excel?';
-    if (reportType === 'daily') {
-      url += `date=${date}`;
-    } else if (reportType === 'monthly') {
-      url += `month=${month}`;
-    } else if (reportType === 'range') {
-      url += `from_date=${fromDate}&to_date=${toDate}`;
+    if (reportType === 'daily') url += `date=${date}`;
+    else if (reportType === 'monthly') url += `month=${month}`;
+    else if (reportType === 'range') url += `from_date=${fromDate}&to_date=${toDate}`;
+
+    if (selectedShift !== 'All') {
+      url += `&shift=${encodeURIComponent(selectedShift)}`;
     }
+
     window.open(url, '_blank');
   };
 
-  const filtered = summaryData.filter(s => {
-    if (selectedDept === 'All') return true;
-    return s.department === selectedDept;
+  const filteredData = summaryData.filter(d => {
+    return selectedDept === 'All' || d.department === selectedDept;
   });
-
-  const totalWorkingDays = Math.max(1, ...filtered.map(f => f.total_days));
-  const avgAttendance = filtered.length > 0
-    ? Math.round(
-        (filtered.reduce((acc, f) => {
-          const eff = f.present + f.late + f.half_day * 0.5;
-          const pct = f.total_days > 0 ? (eff / f.total_days) * 100 : 0;
-          return acc + pct;
-        }, 0) /
-          filtered.length)
-      )
-    : 0;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Attendance Reports & Analytics</h2>
+          <h2 className="text-xl font-bold text-slate-800">Two-Shift Attendance Reports & Analytics</h2>
           <p className="text-xs text-slate-500">
-            Generate and download Excel (.xlsx) reports with Daily Attendance, Monthly Summary, and Master sheets
+            Generate and export Shift One & Shift Two attendance records and monthly summaries
           </p>
         </div>
 
         <button
           onClick={handleDownload}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
         >
           <FileSpreadsheet className="w-4 h-4" />
-          <span>Download Excel (.xlsx)</span>
+          <span>Download Excel Workbook</span>
         </button>
       </div>
 
-      {/* Control / Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-medium">
+      {/* Filter Card */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 text-xs">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 pb-4">
+          <span className="font-bold text-slate-700">Report Scope:</span>
+          <div className="inline-flex rounded-lg bg-slate-100 p-0.5">
             <button
               onClick={() => setReportType('daily')}
-              className={`px-3 py-1.5 rounded-md transition ${
-                reportType === 'daily' ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600'
-              }`}
+              className={`px-3 py-1.5 rounded-md font-semibold transition ${reportType === 'daily' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600'}`}
             >
               Daily Report
             </button>
             <button
               onClick={() => setReportType('monthly')}
-              className={`px-3 py-1.5 rounded-md transition ${
-                reportType === 'monthly' ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600'
-              }`}
+              className={`px-3 py-1.5 rounded-md font-semibold transition ${reportType === 'monthly' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600'}`}
             >
-              Monthly Report
+              Monthly Summary
             </button>
             <button
               onClick={() => setReportType('range')}
-              className={`px-3 py-1.5 rounded-md transition ${
-                reportType === 'range' ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600'
-              }`}
+              className={`px-3 py-1.5 rounded-md font-semibold transition ${reportType === 'range' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600'}`}
             >
               Custom Date Range
             </button>
           </div>
+        </div>
 
-          {/* Dynamic selector based on reportType */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           {reportType === 'daily' && (
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            />
-          )}
-
-          {reportType === 'monthly' && (
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            />
-          )}
-
-          {reportType === 'range' && (
-            <div className="flex items-center gap-2 text-xs">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Select Date</label>
               <input
                 type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              />
-              <span className="text-slate-400">to</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           )}
 
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-slate-500 font-medium">Department:</span>
+          {reportType === 'monthly' && (
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Select Month</label>
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          {reportType === 'range' && (
+            <>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">From Date</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">To Date</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Shift</label>
+            <select
+              value={selectedShift}
+              onChange={(e) => setSelectedShift(e.target.value)}
+              className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            >
+              <option value="All">All Shifts</option>
+              <option value="Shift One">Shift One (07:15 - 12:30)</option>
+              <option value="Shift Two">Shift Two (12:30 - 17:00)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Department</label>
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {departments.map(d => (
                 <option key={d} value={d}>{d}</option>
@@ -228,31 +250,13 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Analytics Summary Banner */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-slate-500 font-medium">Faculty Evaluated</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">{filtered.length}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-slate-500 font-medium">Working Days in Period</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{totalWorkingDays}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-slate-500 font-medium">Average Attendance %</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{avgAttendance}%</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-slate-500 font-medium">Excel Format</p>
-          <p className="text-xs font-semibold text-slate-700 mt-2">3 Formatted Sheets (Daily, Monthly, Master)</p>
-        </div>
-      </div>
-
-      {/* Report Summary Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
-          <h3 className="font-bold text-sm text-slate-800">Summary Preview (Sheet 2: Monthly Summary)</h3>
-          <span className="text-xs text-slate-400">Total faculty: {filtered.length}</span>
+      {/* Summary Table */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-sm text-slate-800">
+            Summary by Teacher & Shift ({filteredData.length} entries)
+          </h3>
+          <span className="text-xs text-slate-400">Sheet 2 Preview</span>
         </div>
 
         {loading ? (
@@ -262,58 +266,68 @@ export default function Reports() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Teacher ID</th>
-                  <th className="py-3 px-4">Teacher Name</th>
+                  <th className="py-3 px-4">Faculty Name</th>
+                  <th className="py-3 px-4">Shift</th>
                   <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4 text-center">Working Days</th>
+                  <th className="py-3 px-4 text-center">Days</th>
                   <th className="py-3 px-4 text-center">Present</th>
                   <th className="py-3 px-4 text-center">Late</th>
                   <th className="py-3 px-4 text-center">Half Day</th>
                   <th className="py-3 px-4 text-center">Absent</th>
-                  <th className="py-3 px-4 text-center">On Leave</th>
-                  <th className="py-3 px-4 text-center">Total Working Hours</th>
+                  <th className="py-3 px-4 text-center">Total Hours</th>
                   <th className="py-3 px-4 text-center">Attendance %</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(s => {
-                  const days = s.total_days || 1;
-                  const eff = s.present + s.late + s.half_day * 0.5;
-                  const pct = Math.min(100, Math.round((eff / days) * 100));
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="py-8 text-center text-slate-400">
+                      No report records for the selected criteria
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map(d => {
+                    const totalDays = Math.max(d.total_days, 1);
+                    const worked = d.present + d.late + (d.half_day * 0.5);
+                    const pct = Math.round((worked / totalDays) * 100);
 
-                  return (
-                    <tr key={s.teacher_id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-700">{s.teacher_id}</td>
-                      <td className="py-3 px-4 font-medium text-slate-900">{s.full_name}</td>
-                      <td className="py-3 px-4 text-slate-600">{s.department}</td>
-                      <td className="py-3 px-4 text-center font-mono">{s.total_days}</td>
-                      <td className="py-3 px-4 text-center font-bold text-emerald-600">{s.present}</td>
-                      <td className="py-3 px-4 text-center font-bold text-amber-600">{s.late}</td>
-                      <td className="py-3 px-4 text-center font-bold text-orange-500">{s.half_day}</td>
-                      <td className="py-3 px-4 text-center font-bold text-rose-600">{s.absent}</td>
-                      <td className="py-3 px-4 text-center font-bold text-blue-600">{s.on_leave}</td>
-                      <td className="py-3 px-4 text-center font-medium text-slate-700">
-                        {formatHours(s.total_hours)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full font-bold text-[11px] ${
-                            pct >= 85
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : pct >= 75
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {pct}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={`${d.teacher_id}_${d.shift}`} className="hover:bg-slate-50 transition">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">{d.teacher_id}</td>
+                        <td className="py-3 px-4 font-semibold text-slate-900">{d.full_name}</td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            d.shift === 'Shift Two'
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {d.shift}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-700">{d.department}</td>
+                        <td className="py-3 px-4 text-center font-medium text-slate-800">{d.total_days}</td>
+                        <td className="py-3 px-4 text-center font-bold text-emerald-600">{d.present}</td>
+                        <td className="py-3 px-4 text-center font-bold text-amber-600">{d.late}</td>
+                        <td className="py-3 px-4 text-center font-bold text-orange-600">{d.half_day}</td>
+                        <td className="py-3 px-4 text-center font-bold text-rose-600">{d.absent}</td>
+                        <td className="py-3 px-4 text-center font-medium text-slate-800">{formatHours(d.total_hours)}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            pct >= 85 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            pct >= 75 ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                            'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {pct}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -322,4 +336,3 @@ export default function Reports() {
     </div>
   );
 }
-

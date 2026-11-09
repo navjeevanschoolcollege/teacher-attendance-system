@@ -11,6 +11,9 @@ import {
   Sun,
   Wifi,
   FileSpreadsheet,
+  FileCheck,
+  QrCode,
+  Radio,
   LogOut,
   Menu,
   X,
@@ -25,6 +28,9 @@ import LeaveManagement from '../components/admin/LeaveManagement';
 import HolidayManagement from '../components/admin/HolidayManagement';
 import WiFiSettings from '../components/admin/WiFiSettings';
 import Reports from '../components/admin/Reports';
+import CorrectionManagement from '../components/admin/CorrectionManagement';
+import StaffRoomQR from '../components/admin/StaffRoomQR';
+import LiveTracker from '../components/admin/LiveTracker';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -39,12 +45,15 @@ export default function AdminLayout() {
 
   const navItems = [
     { label: 'Live Dashboard', path: '/admin', icon: LayoutDashboard, exact: true },
+    { label: 'Movement Tracker', path: '/admin/tracker', icon: Radio },
     { label: 'Teachers', path: '/admin/teachers', icon: Users },
     { label: 'Devices', path: '/admin/devices', icon: Smartphone },
     { label: 'Attendance', path: '/admin/attendance', icon: CalendarCheck },
+    { label: 'Corrections & Disputes', path: '/admin/corrections', icon: FileCheck },
+    { label: 'Staff Room QR', path: '/admin/staff-room-qr', icon: QrCode },
     { label: 'Leaves', path: '/admin/leaves', icon: CalendarDays },
     { label: 'Holidays', path: '/admin/holidays', icon: Sun },
-    { label: 'WiFi Settings', path: '/admin/wifi-settings', icon: Wifi },
+    { label: 'WiFi & Timing Rules', path: '/admin/wifi-settings', icon: Wifi },
     { label: 'Reports & Export', path: '/admin/reports', icon: FileSpreadsheet },
   ];
 
@@ -165,9 +174,12 @@ export default function AdminLayout() {
         <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
           <Routes>
             <Route index element={<AdminDashboard />} />
+            <Route path="tracker" element={<LiveTracker />} />
             <Route path="teachers" element={<TeacherManagement />} />
             <Route path="devices" element={<DeviceManagement />} />
             <Route path="attendance" element={<AttendanceManagement />} />
+            <Route path="corrections" element={<CorrectionManagement />} />
+            <Route path="staff-room-qr" element={<StaffRoomQR />} />
             <Route path="leaves" element={<LeaveManagement />} />
             <Route path="holidays" element={<HolidayManagement />} />
             <Route path="wifi-settings" element={<WiFiSettings />} />

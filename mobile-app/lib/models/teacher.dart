@@ -8,6 +8,7 @@ class Teacher {
   final String? designation;
   final String? subject;
   final String? employeeId;
+  final String shift; // Shift One, Shift Two, Both
   final String status; // active, inactive
   final DateTime? createdAt;
 
@@ -20,6 +21,7 @@ class Teacher {
     this.designation,
     this.subject,
     this.employeeId,
+    this.shift = 'Shift One',
     this.status = 'active',
     this.createdAt,
   });
@@ -34,6 +36,7 @@ class Teacher {
       designation: json['designation'] as String?,
       subject: json['subject'] as String?,
       employeeId: json['employee_id'] as String?,
+      shift: (json['shift'] as String?) ?? 'Shift One',
       status: (json['status'] as String?) ?? 'active',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
@@ -51,6 +54,7 @@ class Teacher {
       'designation': designation,
       'subject': subject,
       'employee_id': employeeId,
+      'shift': shift,
       'status': status,
     };
   }
@@ -64,6 +68,7 @@ class Teacher {
     String? designation,
     String? subject,
     String? employeeId,
+    String? shift,
     String? status,
     DateTime? createdAt,
   }) {
@@ -76,6 +81,7 @@ class Teacher {
       designation: designation ?? this.designation,
       subject: subject ?? this.subject,
       employeeId: employeeId ?? this.employeeId,
+      shift: shift ?? this.shift,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
     );
