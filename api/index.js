@@ -1,21 +1,21 @@
 const url = require('url');
 
 const handlers = {
-  'attendance': require('./handlers/attendance'),
-  'checkin': require('./handlers/checkin'),
-  'checkout': require('./handlers/checkout'),
-  'corrections': require('./handlers/corrections'),
-  'dashboard': require('./handlers/dashboard'),
-  'devices': require('./handlers/devices'),
-  'export-excel': require('./handlers/export-excel'),
-  'holidays': require('./handlers/holidays'),
-  'leaves': require('./handlers/leaves'),
-  'mobile-sync': require('./handlers/mobile-sync'),
-  'rotating-qr': require('./handlers/rotating-qr'),
-  'teachers': require('./handlers/teachers'),
-  'tracker': require('./handlers/tracker'),
-  'wifi-heartbeat': require('./handlers/wifi-heartbeat'),
-  'wifi-settings': require('./handlers/wifi-settings')
+  'attendance': require('../server/handlers/attendance'),
+  'checkin': require('../server/handlers/checkin'),
+  'checkout': require('../server/handlers/checkout'),
+  'corrections': require('../server/handlers/corrections'),
+  'dashboard': require('../server/handlers/dashboard'),
+  'devices': require('../server/handlers/devices'),
+  'export-excel': require('../server/handlers/export-excel'),
+  'holidays': require('../server/handlers/holidays'),
+  'leaves': require('../server/handlers/leaves'),
+  'mobile-sync': require('../server/handlers/mobile-sync'),
+  'rotating-qr': require('../server/handlers/rotating-qr'),
+  'teachers': require('../server/handlers/teachers'),
+  'tracker': require('../server/handlers/tracker'),
+  'wifi-heartbeat': require('../server/handlers/wifi-heartbeat'),
+  'wifi-settings': require('../server/handlers/wifi-settings')
 };
 
 module.exports = async function handler(req, res) {
@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
   // Ensure query params are populated on req.query
   req.query = { ...parsedUrl.query, ...(req.query || {}) };
 
-  // Parse body if not already parsed (for Vercel serverless / raw node)
+  // Parse body if not already parsed
   if (['POST', 'PUT', 'PATCH'].includes(req.method) && (!req.body || Object.keys(req.body).length === 0)) {
     try {
       const buffers = [];
@@ -73,4 +73,3 @@ module.exports = async function handler(req, res) {
     }
   }
 };
-
