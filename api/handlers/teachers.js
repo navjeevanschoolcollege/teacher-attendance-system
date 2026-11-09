@@ -1,4 +1,4 @@
-const { supabase } = require('./lib/supabase');
+const { supabase } = require('../lib/supabase');
 
 // ── CORS headers ──────────────────────────────────────────────────────────────
 function setCors(res) {
@@ -111,3 +111,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 };
+

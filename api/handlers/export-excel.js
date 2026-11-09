@@ -1,5 +1,5 @@
 const ExcelJS = require('exceljs');
-const { supabase } = require('./lib/supabase');
+const { supabase } = require('../lib/supabase');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -517,3 +517,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to generate Excel', details: err.message });
   }
 };
+

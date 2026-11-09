@@ -5,7 +5,6 @@ const fs = require('fs');
 
 const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
 
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,15 +13,6 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     return res.end();
-  }
-
-  const routeName = pathname.replace(/^\/api\/?/, '').split('/')[0] || 'dashboard';
-  const handlerFile = path.join(__dirname, 'api', `${routeName}.js`);
-
-  if (!fs.existsSync(handlerFile)) {
-    res.statusCode = 404;
-    res.setHeader('Content-Type', 'application/json');
-    return res.end(JSON.stringify({ error: `API route not found: ${pathname}` }));
   }
 
   let body = {};
@@ -55,11 +45,11 @@ const server = http.createServer(async (req, res) => {
   };
 
   try {
-    delete require.cache[require.resolve(handlerFile)];
-    const handler = require(handlerFile);
-    await handler(req, res);
+    delete require.cache[require.resolve('./api/index.js')];
+    const mainHandler = require('./api/index.js');
+    await mainHandler(req, res);
   } catch (err) {
-    console.error(`Error in ${routeName}:`, err);
+    console.error('API Error:', err);
     if (!res.headersSent) {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
@@ -72,4 +62,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`API Server running at http://localhost:${PORT}`);
 });
-
