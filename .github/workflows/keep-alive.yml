@@ -1,0 +1,22 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/wifi_settings?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Supabase health check: HTTP $STATUS"
+          if [ "$STATUS" -ne 200 ]; then
+            echo "WARNING: Supabase returned non-200 status"
+            exit 1
+          fi

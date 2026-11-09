@@ -1,13 +1,17 @@
 {
   "name": "teacher-attendance-system",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "api"
+  ],
   "scripts": {
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.39.0",
+    "@supabase/ssr": "^0.12.7",
     "exceljs": "^4.4.0"
   }
 }
